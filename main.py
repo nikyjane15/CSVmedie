@@ -143,7 +143,7 @@ for dir in dir_results:
         # calculate the average
         avg_active_window = []          # average of sampling values for each active window
         avg_passive_window = []         # average of sampling values for each passive window
-        num_column = df_timestamps.iloc[index, 1:].shape[0] # take the number of the column
+        num_column = df_timestamps.iloc[index, 1:].shape[0] # take the number of the column (32)
         sum_avg = [0] * num_column      # Crea una lista con 5 posizioni inizializzate a 0
         
         #print("-- df_mean_active[" + str(1) + "] ->", df_mean_active[1])
@@ -186,7 +186,7 @@ for dir in dir_results:
             # add the mean to the array in the index(current window) position
             avg_passive_window.append(sum_avg)
         
-        
+        """
         # print the average
         print("\n\n\n------------ Mean Active window mean: ------------")
         for i in range(len(avg_active_window)):
@@ -197,6 +197,71 @@ for dir in dir_results:
         for i in range(len(avg_passive_window)):
             print("\n\nPassive window " + str(i))
             print("-- value ->\n", avg_passive_window[i])
+        """
+            
+        # save the result (the mean value for each window) in a csv file
+        mode = 1;                           # var to manage the save mode, if 0 will save the values for active or passive windows in separate files, if 1 will save the values for active or passive windows in merged files
+        # define column name
+        c_0 = []
+        c_0.append("Scale")
+        c_1 = [f"cpu{i}" for i in range(32)] 
+        column_names = c_0 + c_1
+        print("column name: ", column_names)
+        
+        if mode == 0:
+            active_save_path = "active_output_file.csv"       # path for the rusult CSV file
+            passive_save_path = "passive_output_file.csv"     # path for the rusult CSV file
+            
+            active_rows = []        # contains the data for the active windows
+            passive_rows = []       # contains the data for the passive windows
+            
+            # take the mean for the active windows
+            m_1 = []
+            m_1.append(1)
+            for mean in avg_active_window: 
+                active_rows.append(m_1 + mean)
+            
+            # take the mean for the active windows
+            m_0 = []
+            m_0.append(0)
+            for mean in avg_passive_window:  
+                passive_rows.append(m_0 + mean)
+                
+            df_active = pd.DataFrame(active_rows, columns=column_names)     # create dataframe for active windows
+            df_passive = pd.DataFrame(passive_rows, columns=column_names)   # create dataframe for active windows
+            
+            df_active.to_csv(active_save_path, index=False)     # save mean for active windows
+            df_passive.to_csv(passive_save_path, index=False)   # save mean for passive windows
+            
+        elif mode == 1:
+            save_path = "output_file.csv"       # path for the rusult CSV file
+            
+            rows = []           # contains the data for the active and passive windows
+            
+            max_len = max(len(avg_active_window), len(avg_passive_window))  # take the bigger len of the array
+            m_1 = []
+            m_1.append(1)
+            m_0 = []
+            m_0.append(0)
+
+            # take the mean for the active and passive windows (windows sorted by timestamp)
+            for i in range(max_len):
+                
+                if i < len(avg_active_window):
+                    rows.append(m_1 + avg_active_window[i])
+                
+                if i < len(avg_passive_window):
+                    rows.append(m_0 + avg_passive_window[i])
+            
+            df = pd.DataFrame(rows, columns=column_names)     # create dataframe for active windows
+            
+            df.to_csv(save_path, index=False)
+            
+            
+        
+
+# Passo 3: Crea un DataFrame con i nomi delle colonne e l'array
+
         
         # control exit to execute only one case and not all (debug utility)
         exit()
