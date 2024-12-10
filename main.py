@@ -82,7 +82,7 @@ for dir in dir_results:
                     if timest > limit_timestamp[current_window][1] and timest < limit_timestamp[current_window + 1][0]:     # passive window n
                         # save the value for the current active window (if the array is not empty)
                         if len(temp_array_active_sample) != 0:
-                            df_mean_active.append(temp_array_active_sample)
+                            df_mean_active.append(temp_array_active_sample.copy())
                             temp_array_active_sample.clear()
                         
                         #print("campionamento finestra passiva")
@@ -94,7 +94,8 @@ for dir in dir_results:
                         
                     else:                                                                                                   # active window n+1
                         # save the value for the current passive window
-                        df_mean_passive.append(temp_array_passive_sample)
+                        #print("Salvo in passive -> ", temp_array_passive_sample)
+                        df_mean_passive.append(temp_array_passive_sample.copy())
                         temp_array_passive_sample.clear()
                         
                         #print("campionamento finestra attiva")
@@ -106,6 +107,11 @@ for dir in dir_results:
                         temp_array_active_sample.append(df_timestamps.iloc[index,1:])   # add the sample to the temp array
                         
                 else:                                               # there is no active window after the current one, last passive window
+                    # save the value for the current active window (if the array is not empty)
+                    if len(temp_array_active_sample) != 0:
+                        print("Salvo in active -> ", temp_array_active_sample)
+                        df_mean_active.append(temp_array_active_sample.copy())
+                        temp_array_active_sample.clear()
                     #print("campionamento ultima finestra passiva")
                     count_fin_passiva += 1
                     # add sample features to the correct dataframe
@@ -114,9 +120,15 @@ for dir in dir_results:
                     temp_array_passive_sample.append(df_timestamps.iloc[index,1:])   # add the sample to the temp array
         
         # save the value for the current passive window (the last)
-        if not temp_array_passive_sample:
-            df_mean_passive.append(temp_array_passive_sample)
+        if len(temp_array_passive_sample) != 0:
+            #print("Salvo in last passive -> ", temp_array_passive_sample)
+            df_mean_passive.append(temp_array_passive_sample.copy())
             temp_array_passive_sample.clear()
+            
+        if len(temp_array_active_sample) != 0:
+            #print("Salvo in last active -> ", temp_array_active_sample)
+            df_mean_active.append(temp_array_active_sample.copy())
+            temp_array_active_sample.clear()
         
         if mean == False:
             df_new.to_csv(Path(save_dir,f"scale_"+file),index=False)
@@ -134,11 +146,15 @@ for dir in dir_results:
         num_column = df_timestamps.iloc[index, 1:].shape[0] # take the number of the column
         sum_avg = [0] * num_column      # Crea una lista con 5 posizioni inizializzate a 0
         
+        #print("-- df_mean_active[" + str(1) + "] ->", df_mean_active[1])
+        
         # scan all the position of the df_mean_active
         for index, active_window in enumerate(df_mean_active):
+            #print("-- active_window[" + str(index) + "] ->", active_window)
             sum_avg = [0] * num_column      # Crea una lista con 5 posizioni inizializzate a 0
             # scan all the sample saved in the current position (sample in current active windows)
             for sample in active_window:
+                #print("-- control sample, active_window[" + str(index) + "] ->", sample)
                 # sum all value of the column
                 for i in range(num_column):
                     sum_avg[i] += sample.iloc[i]    # sum with the value of the i-th sample
@@ -150,7 +166,6 @@ for dir in dir_results:
                 
             # add the mean to the array in the index(current window) position
             avg_active_window.append(sum_avg)
-        
         
         
         sum_avg = [0] * num_column      # Crea una lista con 5 posizioni inizializzate a 0
@@ -173,13 +188,15 @@ for dir in dir_results:
         
         
         # print the average
-        print("\nActive window mean: ")
+        print("\n\n\n------------ Mean Active window mean: ------------")
         for i in range(len(avg_active_window)):
-            print("Active window " + str(i) + " ", avg_active_window[i])
+            print("\n\nActive window " + str(i))
+            print("-- value ->\n", avg_active_window[i])
             
-        print("\nPassive window mean: ")
+        print("\n\n\n------------ Mean Passive window mean: ------------")
         for i in range(len(avg_passive_window)):
-            print("Passive window " + str(i) + " ", avg_passive_window[i])
+            print("\n\nPassive window " + str(i))
+            print("-- value ->\n", avg_passive_window[i])
         
         # control exit to execute only one case and not all (debug utility)
         exit()
