@@ -80,9 +80,10 @@ for dir in dir_results:
                 elif current_window + 1 < len(limit_timestamp):              # check if there is an active window after the current one                                       
                     
                     if timest > limit_timestamp[current_window][1] and timest < limit_timestamp[current_window + 1][0]:     # passive window n
-                        # save the value for the current active window
-                        df_mean_active.append(temp_array_active_sample)
-                        temp_array_active_sample.clear()
+                        # save the value for the current active window (if the array is not empty)
+                        if len(temp_array_active_sample) != 0:
+                            df_mean_active.append(temp_array_active_sample)
+                            temp_array_active_sample.clear()
                         
                         #print("campionamento finestra passiva")
                         count_fin_passiva += 1          # update passive count
