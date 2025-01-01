@@ -1,42 +1,46 @@
 import pandas as pd
 import os
 from pathlib import Path
-
-limits_file = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500/csv_results/correct.csv"
+"""
+limits_file = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500/csv_results/scaled.csv"
 directory_timestamps_states = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500"
 dir_results = ['results_state', 'results_cpus']
 path = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500/No_mean_csv_results"
+"""
 
-"""
-limits_file = "Scaling with more detail/Scaling Countinus/1h/csv_results/correct.csv"
-directory_timestamps_states = "Scaling with more detail/Scaling Countinus/1h"
+limits_file = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling\csv_results\scaled.csv"
+end_timestamp_correct = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling\csv_results\correct.csv"
+directory_timestamps_states = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling"
 dir_results = ['results_state', 'results_cpus']
-path = "Scaling with more detail/Scaling Countinus/1h/cstate_results"
-"""
+path = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling\cstate_results"
+
 mean = False
 df_limits = pd.read_csv(limits_file)
+df_limits_last = pd.read_csv(end_timestamp_correct)
 
-count = 0
 a = df_limits['Sequence number'].to_list()
+b = df_limits_last.iloc[len(df_limits_last.index)-1]
 limit_timestamp = []
-for i in range(len(a) - 1):
-    if a[i + 1] == a[i] + 1:  # check if in the same window
-        count += 1
-        continue
+for i in range(len(a)-1):
+    if i == len(a)-2:
+        start = df_limits.loc[i, 'Service stop responding time (ns)']
+        end = b['Receiving time (ns)']
+        limit_timestamp.append((df_limits.loc[i,'Scale type'],start, end))
+        break
     else:
-        start = df_limits.loc[i - count, 'Receiving time (ns)']
-        end = df_limits.loc[i, 'Receiving time (ns)']
-        limit_timestamp.append((start, end))
-        count = 0
+        start = df_limits.loc[i, 'Service stop responding time (ns)']
+        end = df_limits.loc[i+1, 'Service stop responding time (ns)']
+        limit_timestamp.append((df_limits.loc[i,'Scale type'],start, end))
 
+#la lunghezza di limit_timestamp e' il numero di finestre attive
 # get all files in dir
 for dir in dir_results:
     temp = Path(directory_timestamps_states, dir)
     file_list = [f for f in os.listdir(temp) if
                  os.path.isfile(os.path.join(temp, f))]
 
-    t_start = limit_timestamp[0][0]  # take the timestamp indicating the start time of the test
-    t_end = limit_timestamp[-1][1]  # take the timestamp indicating the end time of the test
+    t_start = limit_timestamp[0][1]  # take the timestamp indicating the start time of the test
+    t_end = limit_timestamp[-1][2]  # take the timestamp indicating the end time of the test
 
     # set the save directory
     save_dir = Path(path + "/" + dir)
@@ -45,13 +49,12 @@ for dir in dir_results:
     # process each file (result of a test)
     for file in file_list:
         # gets sampling timestamps
-        df_timestamps = pd.read_csv(Path(temp, file))
+        df_timestamps = pd.read_csv(Path(temp, file,), sep=';')
         # Manipulation to get new columns format
-        df_timestamps.rename(columns={'Unnamed: 0': 'Timestamp'}, inplace=True)
         df_columns = df_timestamps.columns.to_list()
         df_columns.insert(0, "Scale")
         df_new = pd.DataFrame(columns=df_columns)
-        timestamps = df_timestamps["Timestamp"].to_list()
+        timestamps = df_timestamps["timestamp"].to_list()
         # array to contain the samples that fall within the active windows. Each position in the array will indicate the corresponding active window, which will contain all sample values collected in that window
         df_mean_active = []
         # array to contain the samples that fall within the passive windows. Each position in the array will indicate the corresponding passive window, which will contain all sample values collected in that window
@@ -68,93 +71,66 @@ for dir in dir_results:
         temp_array_passive_sample = []  # contains the sample of the current passive window
         temp_time_stamp_array = []
 
+        ######for index, timest in enumerate(timestamps):
+
         # for to scan all samplings and subdivide them according to when they occurred (in an active window, passive window or outside the time of the test).
         for index, timest in enumerate(timestamps):
             if timest < t_start or timest > t_end:  # samplings outside the time of the test
                 count_eliminate += 1
                 continue
             else:  # samplings inside the time of the test
-                if timest >= limit_timestamp[current_window][0] and timest <= limit_timestamp[current_window][
-                    1]:  # active window n
+                #is the timestamp inside the current window?
+                if timest >= limit_timestamp[current_window][1] and timest <= limit_timestamp[current_window][2]:  # active window n
                     # print("campionamento finestra attiva")
-                    count_fin_attiva += 1  # update active count
-                    # add sample features to the correct dataframe
-                    series_temp = pd.concat([pd.Series({'Scale': 1}), df_timestamps.loc[index]])
-                    df_new.loc[len(df_new)] = series_temp
-                    temp_array_active_sample.append(df_timestamps.iloc[index])  # add the sample to the temp array
-                    temp_time_stamp_array.append(timest)  # add the timestamp
-
-                elif current_window + 1 < len(
-                        limit_timestamp):  # check if there is an active window after the current one
-
-                    if timest > limit_timestamp[current_window][1] and timest < limit_timestamp[current_window + 1][
-                        0]:  # passive window n
-                        # save the value for the current active window (if the array is not empty)
-                        if len(temp_array_active_sample) != 0:
-                            df_mean_active.append(temp_array_active_sample.copy())
-                            temp_array_active_sample.clear()
-                            time_stamp_active_ar.append(temp_time_stamp_array.copy())
-                            temp_time_stamp_array.clear();
-
-                        # print("campionamento finestra passiva")
-                        count_fin_passiva += 1  # update passive count
-                        # add sample features to the correct dataframe
+                    if(limit_timestamp[current_window][0] == "DOWN"):
+                        count_fin_passiva += 1
                         series_temp = pd.concat([pd.Series({'Scale': 0}), df_timestamps.loc[index]])
-                        df_new.loc[len(df_new)] = series_temp
                         temp_array_passive_sample.append(df_timestamps.iloc[index])  # add the sample to the temp array
-                        temp_time_stamp_array.append(timest)  # add the timestamp
-
-                    else:  # active window n+1
-                        # save the value for the current passive window
-                        # print("Salvo in passive -> ", temp_array_passive_sample)
-                        df_mean_passive.append(temp_array_passive_sample.copy())
-                        temp_array_passive_sample.clear()
-                        time_stamp_passive_ar.append(temp_time_stamp_array.copy())
-                        temp_time_stamp_array.clear();
-
-                        # print("campionamento finestra attiva")
-                        current_window += 1  # update current window count
+                    else:
                         count_fin_attiva += 1  # update active count
                         # add sample features to the correct dataframe
                         series_temp = pd.concat([pd.Series({'Scale': 1}), df_timestamps.loc[index]])
-                        df_new.loc[len(df_new)] = series_temp
-                        temp_array_active_sample.append(
-                            df_timestamps.iloc[index, 1:])  # add the sample to the temp array
-                        temp_time_stamp_array.append(timest)  # add the timestamp
+                        temp_array_active_sample.append(df_timestamps.iloc[index])  # add the sample to the temp array
+
+                    temp_time_stamp_array.append(timest)
+                    df_new.loc[len(df_new)] = series_temp  # add the timestamp
+
+                elif current_window + 1 < len(limit_timestamp):  # check if there is an active window after the current one
+                    #is the timestamp i am looking in the window
+                        # save the value for the current active window (if the array is not empty)
+
+                    if len(temp_array_active_sample) != 0:
+                        df_mean_active.append(temp_array_active_sample.copy())
+                        temp_array_active_sample.clear()
+                        time_stamp_active_ar.append(temp_time_stamp_array.copy())
+                        temp_time_stamp_array.clear()
+
+                    if len(temp_array_passive_sample) != 0:
+                        df_mean_passive.append(temp_array_passive_sample.copy())
+                        temp_array_passive_sample.clear()
+                        time_stamp_passive_ar.append(temp_time_stamp_array.copy())
+                        temp_time_stamp_array.clear()
+
+                    # print("campionamento finestra attiva")
+                    current_window += 1  # update current window count
+                    # add sample features to the correct dataframe
+                    # add the timestamp
 
                 else:  # there is no active window after the current one, last passive window
                     # save the value for the current active window (if the array is not empty)
                     if len(temp_array_active_sample) != 0:
-                        # print("Salvo in active -> ", temp_array_active_sample)
                         df_mean_active.append(temp_array_active_sample.copy())
                         temp_array_active_sample.clear()
                         time_stamp_active_ar.append(temp_time_stamp_array.copy())
-                        temp_time_stamp_array.clear();
+                        temp_time_stamp_array.clear()
 
-                    # print("campionamento ultima finestra passiva")
-                    count_fin_passiva += 1
-                    # add sample features to the correct dataframe
-                    series_temp = pd.concat([pd.Series({'Scale': 0}), df_timestamps.loc[index]])
-                    df_new.loc[len(df_new)] = series_temp
-                    temp_array_passive_sample.append(df_timestamps.iloc[index, 1:])  # add the sample to the temp array
-                    temp_time_stamp_array.append(timest)  # add the timestamp
+                    if len(temp_array_passive_sample) != 0:
+                        df_mean_passive.append(temp_array_passive_sample.copy())
+                        temp_array_passive_sample.clear()
+                        time_stamp_passive_ar.append(temp_time_stamp_array.copy())
+                        temp_time_stamp_array.clear()
 
-        # save the value for the current passive window (the last)
-        if len(temp_array_passive_sample) != 0:
-            # print("Salvo in last passive -> ", temp_array_passive_sample)
-            df_mean_passive.append(temp_array_passive_sample.copy())
-            temp_array_passive_sample.clear()
-            time_stamp_passive_ar.append(temp_time_stamp_array.copy())
-            temp_time_stamp_array.clear();
-
-        if len(temp_array_active_sample) != 0:
-            # print("Salvo in last active -> ", temp_array_active_sample)
-            df_mean_active.append(temp_array_active_sample.copy())
-            temp_array_active_sample.clear()
-            time_stamp_active_ar.append(temp_time_stamp_array.copy())
-            temp_time_stamp_array.clear();
-
-        if mean == False:
+        if not mean:
             df_new.to_csv(Path(save_dir, f"scale_" + file), index=False, sep=';', decimal=',', encoding='utf-8')
 
         # control print
