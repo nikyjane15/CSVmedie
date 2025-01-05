@@ -1,19 +1,8 @@
 import pandas as pd
 import os
 from pathlib import Path
-"""
-limits_file = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500/csv_results/scaled.csv"
-directory_timestamps_states = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500"
-dir_results = ['results_state', 'results_cpus']
-path = "C:/Users/MalvaTalpa/Desktop/Scaling with more detail/Scaling sparcely 500/No_mean_csv_results"
-"""
 
 path = Path(r"B:/Risultati Scaling/")
-limits_file = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling\csv_results\scaled.csv"
-end_timestamp_correct = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling\csv_results\correct.csv"
-directory_timestamps_states = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling"
-dir_results = ['results_state', 'results_cpus', 'results_rapl_energies']
-save_path = r"B:\Risultati Scaling\50percent cpu\New (correct) 100 pkt scaling\cstate_results"
 
 dirs = os.listdir(path)
 for directory in dirs:
