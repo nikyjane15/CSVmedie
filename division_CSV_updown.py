@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 path = Path(r"B:/Risultati Scaling/")
+dir_results = ['results_state', 'results_cpus', 'results_rapl_energies']
 
 dirs = os.listdir(path)
 for directory in dirs:
@@ -14,7 +15,7 @@ for directory in dirs:
     for pkt_scale in new_path_dirs:
         limits_file = Path.joinpath(new_path,pkt_scale,r"csv_results\scaled.csv")
         end_timestamp_correct = Path.joinpath(new_path,pkt_scale, r"csv_results\correct.csv")
-        directory_timestamps_states =Path.joinpath(new_path,pkt_scale)
+        directory_timestamps_states = Path.joinpath(new_path,pkt_scale)
         save_path = Path.joinpath(new_path,pkt_scale,r"results_cstate_rapl_raritan")
 
         mean = False
